@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trainingslog</title>
 <meta name="theme-color" content="#0e1013">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,7 +20,7 @@
   --r:16px; --safeB:env(safe-area-inset-bottom,0px); --safeT:env(safe-area-inset-top,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;touch-action:manipulation}
 button,input,select,textarea{font:inherit;color:inherit}
 main{max-width:560px;margin:0 auto;padding:calc(14px + var(--safeT)) 16px calc(150px + var(--safeB))}
 h1{font-size:26px;margin:2px 0 2px;letter-spacing:-.02em}
@@ -57,6 +57,11 @@ h2{font-size:13px;margin:22px 0 10px;color:var(--muted);font-weight:700;text-tra
 .set.nokg,.hdr.nokg{grid-template-columns:22px 1fr 48px}
 .set.nokg.side,.hdr.nokg.side{grid-template-columns:22px 1fr 1fr 48px}
 .set{padding:6px;border-radius:12px;transition:background .2s}
+/* kg + L + R in einer Zeile: kompakter, damit die Zahlen auf schmalen Handys lesbar bleiben */
+.set.side:not(.nokg),.hdr.side:not(.nokg){grid-template-columns:16px 1fr 1fr 1fr 40px;gap:5px}
+.set.side:not(.nokg){padding:6px 4px}
+.hdr.side:not(.nokg){padding:0 4px}
+.set.side:not(.nokg) .step button{width:22px;font-size:18px}
 .set.done{background:var(--done)}
 .hdr{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:0 6px}
 .hdr span{text-align:center}
@@ -132,6 +137,15 @@ nav button.on{color:var(--accent)}
 .addset{background:none;border:1px dashed var(--line);border-radius:10px;color:var(--muted);padding:8px;font-size:13px;cursor:pointer;margin-top:4px}
 .hist{font-size:13px;color:#b9bec7;padding:8px 0;border-top:1px solid var(--line);line-height:1.4}
 .hist b{color:var(--text)}
+.dur{margin-left:8px;font-variant-numeric:tabular-nums}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
+.cal .wd{font-size:11px;color:var(--muted);text-align:center;padding:2px 0}
+.cal .d{aspect-ratio:1;border-radius:10px;background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.1}
+.cal .d small{font-size:10px;font-weight:800;opacity:.85}
+.cal .d.on{background:#173a24;color:#a9efbf;font-weight:700;cursor:pointer}
+.cal .d.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.cal .d.x{visibility:hidden}
+@media (max-width:420px){ main{padding-left:12px;padding-right:12px} .card{padding:12px} }
 </style>
 </head>
 <body>
@@ -168,6 +182,23 @@ DB.v = 1; DB.sessions = DB.sessions || []; DB.weights = DB.weights || []; DB.che
 DB.settings = Object.assign({rest:90}, DB.settings || {}); DB.active = DB.active || null;
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch(e){ toast('⚠︎ Speichern fehlgeschlagen'); } }
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
+
+/* Einmalige Datenkorrekturen (v1.1). Greifen nur, solange die alten Werte noch drinstehen – auch nach erneutem Import. */
+function fixData(){
+  const S = id => DB.sessions.find(s => s.id === id);
+  let ch = false;
+  const k = S('smv12uscmcgv'); // 09.10.: Klimmzug + Latzug in einer Übung eingetragen
+  if (k && k.ex.c_klimmzug && !k.ex.c_latzug && k.ex.c_klimmzug.sets.some(x => x.kg > 0)){
+    const all = k.ex.c_klimmzug.sets;
+    k.ex.c_klimmzug.sets = all.filter(x => !(x.kg > 0)); k.ex.c_latzug = {sets:all.filter(x => x.kg > 0)}; ch = true;
+  }
+  const r = k && k.ex.c_khrudern && k.ex.c_khrudern.sets[1]; // Tippfehler 1 statt 10
+  if (r && r.r === 10 && r.rR === 1){ r.rR = 10; ch = true; }
+  const a = S('smv8gb5g0ijt'), p = a && a.ex.a_pallof && a.ex.a_pallof.sets[1]; // 14.10.: Tippfehler 17 statt 12
+  if (p && p.r === 12 && p.rR === 17){ p.rR = 12; ch = true; }
+  if (ch) save();
+}
+fixData();
 
 /* ---------- Datum ---------- */
 function todayISO(){ const d = new Date(); return new Date(d - d.getTimezoneOffset()*6e4).toISOString().slice(0,10); }
@@ -286,6 +317,17 @@ function kneeDue(){
   if (!c) return s;
   return (c.p24 == null && daysBetween(s.date, todayISO()) >= 1) ? s : null;
 }
+function addDays(iso, n){ const d = dObj(iso); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+/* Rhythmus 2 Tage Training, 1 Tag Pause: gestern und vorgestern trainiert, heute noch nicht → Pausentag */
+function restDay(){
+  const t = todayISO(), ds = new Set(doneSessions().map(s => s.date));
+  return !DB.active && !ds.has(t) && ds.has(addDays(t, -1)) && ds.has(addDays(t, -2));
+}
+/* Jüngster ausgefüllter Knie-Check (nach Datum der Einheit) */
+function lastKneeCheck(){
+  return DB.checks.map(k => ({k, s:DB.sessions.find(x => x.id === k.sid)})).filter(x => x.s && ampel(x.k)[0] !== 'n')
+    .sort((a, b) => a.s.date < b.s.date ? 1 : -1)[0] || null;
+}
 function renderHeute(v){
   const s = currentSession(), day = s.day, D = P.days[day], t = todayISO(), sug = suggest();
   let h = `<div class="row between"><span class="sub">${WD[dObj(t).getDay()]}, ${dObj(t).getDate()}. ${MO[dObj(t).getMonth()]}</span><button class="iconbtn" data-act="settings" aria-label="Einstellungen">⚙︎</button></div>
@@ -294,6 +336,9 @@ function renderHeute(v){
     return `<div class="chip ${d === day ? 'on' : ''}" data-act="day" data-d="${d}">${d}<small>${lab}</small></div>`; }).join('')}</div>`;
   const ll = lastLeg();
   if (D.leg && ll && ll.id !== s.id && daysBetween(ll.date, s.date) < 2) h += `<div class="banner red">⚠︎ Letzter Beintag (${ll.day}) war ${agoTxt(daysBetween(ll.date, t))} – Regel: mind. 48 h Abstand zwischen Beineinheiten.</div>`;
+  if (restDay()) h += `<div class="banner info">😴 <span><b>Heute ist Pausentag</b> – gestern und vorgestern trainiert. Erholung gehört zum Plan.</span></div>`;
+  const lk = D.leg ? lastKneeCheck() : null, la = lk ? ampel(lk.k) : null;
+  if (la && (la[0] === 'y' || la[0] === 'r')) h += `<div class="banner ${la[0] === 'r' ? 'red' : ''}" data-act="goknie">🦵 <span><b>Letzter Knie-Check</b> (Tag ${lk.s.day}, ${fmtD(lk.s.date)}): ${esc(la[1])}</span></div>`;
   const kd = kneeDue();
   if (kd) h += `<div class="banner" data-act="goknie">🦵 <span><b>Knie-Check offen</b> für Tag ${kd.day} vom ${fmtD(kd.date)} – Erguss und 24-h-Schmerz eintragen</span></div>`;
   if (DB.active && DB.active.date !== t) h += `<div class="banner info">Offene Einheit vom ${fmtD(DB.active.date)} – abschließen oder unten verwerfen.</div>`;
@@ -308,7 +353,8 @@ function countSets(s){ let tot = 0, dn = 0; Object.values(s.ex).forEach(e => e.s
 function workoutHTML(s, mode){
   const D = P.days[s.day], wl = P.warmups[D.warmup] || [], wd = wl.filter((_, i) => s.warm && s.warm[i]).length;
   const [dn, tot] = countSets(s);
-  let h = `<div class="row between" style="margin-top:14px"><span class="sub" id="cnt">${dn} / ${tot} Sätze</span>
+  const dur = mode === 'live' ? (s.start ? fmtDur(Date.now() - s.start) : '') : (s.start && s.finished ? fmtDur(s.finished - s.start) : '');
+  let h = `<div class="row between" style="margin-top:14px"><span class="sub"><span id="cnt">${dn} / ${tot} Sätze</span><span class="dur" id="dur">${dur ? '⏱ ' + dur : ''}</span></span>
      <input type="date" class="dateinp" data-f="sdate" value="${s.date}"></div>
      <div class="progress"><i id="bar" style="width:${tot ? dn/tot*100 : 0}%"></i></div>`;
   if (wl.length){
@@ -372,9 +418,11 @@ function bindWorkout(root, s, mode){
     }
     if (a === 'warmtoggle'){ UI.warmOpen = !!root.querySelector('#warmcard [hidden]'); UI.warmClosed = !UI.warmOpen; return rerenderKeep(); }
     if (a === 'warm'){
-      s.warm[i] = !s.warm[i]; persist();
-      b.classList.toggle('on', !!s.warm[i]); b.querySelector('.cb').textContent = s.warm[i] ? '✓' : '';
+      s.warm[i] = !s.warm[i];
       const wl = P.warmups[P.days[s.day].warmup], wd = wl.filter((_, k) => s.warm[k]).length;
+      if (mode === 'live' && wd === wl.length) startDur(s);
+      persist(); tickDur();
+      b.classList.toggle('on', !!s.warm[i]); b.querySelector('.cb').textContent = s.warm[i] ? '✓' : '';
       root.querySelector('#wcnt').textContent = wd + '/' + wl.length;
       root.querySelector('#warmcard').classList.toggle('complete', wd === wl.length);
       return;
@@ -405,7 +453,8 @@ function bindWorkout(root, s, mode){
       const ex = EX[exId], x = s.ex[exId].sets[i];
       x.done = !x.done;
       if (x.done){ x.c = {}; if (ex.side && x.r != null && x.rR == null) x.rR = x.r; }
-      persist(); refreshRow(exId, i);
+      if (mode === 'live' && x.done) startDur(s);
+      persist(); refreshRow(exId, i); tickDur();
       if (mode === 'live' && x.done){ startTimer(ex.rest || DB.settings.rest); keepAwake(); }
       return;
     }
@@ -429,6 +478,15 @@ function bindWorkout(root, s, mode){
   };
   function rerenderKeep(){ const y = window.scrollY; render(); window.scrollTo(0, y); }
 }
+/* Trainingsdauer: startet, wenn das Warm-up komplett abgehakt ist – spätestens mit dem ersten erledigten Satz */
+function startDur(s){ if (!s.start) s.start = Date.now(); }
+function fmtDur(ms){ const t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, sec = t % 60;
+  return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(sec).padStart(2, '0'); }
+function tickDur(){
+  const el = UI.screen === 'heute' && $('#dur'), s = DB.active; if (!el) return;
+  el.textContent = s && s.start ? '⏱ ' + fmtDur(Date.now() - s.start) : '';
+}
+setInterval(tickDur, 1000);
 function finishSession(s){
   const [dn, tot] = countSets(s);
   if (dn === 0 && !confirm('Noch kein Satz abgehakt. Trotzdem abschließen?')) return;
@@ -453,22 +511,39 @@ function renderEdit(v){
 }
 
 /* ---------- VERLAUF ---------- */
+function calendarHTML(all){
+  const t = todayISO(); UI.calM = UI.calM || t.slice(0, 7);
+  const [y, m] = UI.calM.split('-').map(Number), n = new Date(y, m, 0).getDate(), off = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+  const byDate = {}; all.forEach(s => (byDate[s.date] = byDate[s.date] || []).push(s));
+  let cells = ['Mo','Di','Mi','Do','Fr','Sa','So'].map(w => `<div class="wd">${w}</div>`).join('') + '<div class="d x"></div>'.repeat(off), cnt = 0;
+  for (let d = 1; d <= n; d++){
+    const iso = UI.calM + '-' + String(d).padStart(2, '0'), ss = byDate[iso] || [];
+    cnt += ss.length;
+    cells += `<div class="d${ss.length ? ' on' : ''}${iso === t ? ' today' : ''}"${ss.length ? ` data-sid="${ss[0].id}"` : ''}>${d}${ss.length ? `<small>${ss.map(s => s.day).join('')}</small>` : ''}</div>`;
+  }
+  return `<div class="card"><div class="row between"><button class="iconbtn" data-cm="-1" aria-label="Vormonat">‹</button>
+    <div style="text-align:center"><b>${MO[m - 1]} ${y}</b><div class="sub small">${cnt} ${cnt === 1 ? 'Einheit' : 'Einheiten'}</div></div>
+    <button class="iconbtn" data-cm="1" aria-label="Nächster Monat">›</button></div><div class="cal">${cells}</div></div>`;
+}
 function renderVerlauf(v){
   UI.vf = UI.vf || 'Alle';
   const all = doneSessions(), list = UI.vf === 'Alle' ? all : all.filter(s => s.day === UI.vf);
   let h = `<h1>Verlauf</h1><div class="sub">${all.length} Einheiten · antippen zum Bearbeiten</div>`;
   const lb = DB.lastBackup ? daysBetween(DB.lastBackup, todayISO()) : null;
   if (all.length && (lb == null || lb > 14)) h += `<div class="banner info" data-act="settings">💾 <span>${lb == null ? 'Noch kein Backup' : 'Letztes Backup ' + agoTxt(lb)} – in den Einstellungen sichern.</span></div>`;
+  h += calendarHTML(all);
   h += `<div class="seg" style="margin-top:14px">${['Alle', ...DAYS].map(d => `<button class="${UI.vf === d ? 'on' : ''}" data-vf="${d}">${d}</button>`).join('')}</div><div class="list">`;
   if (!list.length) h += `<div class="empty">Noch keine Einheiten.<br>Alte Werte kannst du in den Einstellungen importieren.</div>`;
   list.forEach(s => {
     const D = P.days[s.day]; let n = 0; Object.values(s.ex).forEach(e => n += e.sets.length);
     const top = D.ex.find(ex => ex.kg && s.ex[ex.id] && s.ex[ex.id].sets.some(x => x.kg > 0));
     const topTxt = top ? ' · ' + esc(top.n.split(' ')[0]) + ' ' + fmtN(Math.max(...s.ex[top.id].sets.map(x => x.kg || 0))) + ' kg' : '';
-    h += `<div class="item" data-sid="${s.id}"><div class="row" style="min-width:0"><div class="badge ${s.day}">${s.day}</div><div style="min-width:0"><b>Tag ${s.day} · ${esc(D.name)}</b><div class="sub small">${fmtDL(s.date)} · ${n} Sätze${topTxt}</div>${s.note ? `<div class="sub small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.note)}</div>` : ''}</div></div><span class="sub">›</span></div>`;
+    const durTxt = s.start && s.finished ? ' · ' + Math.round((s.finished - s.start) / 6e4) + ' min' : '';
+    h += `<div class="item" data-sid="${s.id}"><div class="row" style="min-width:0"><div class="badge ${s.day}">${s.day}</div><div style="min-width:0"><b>Tag ${s.day} · ${esc(D.name)}</b><div class="sub small">${fmtDL(s.date)} · ${n} Sätze${durTxt}${topTxt}</div>${s.note ? `<div class="sub small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.note)}</div>` : ''}</div></div><span class="sub">›</span></div>`;
   });
   v.innerHTML = h + '</div>';
   v.onclick = ev => {
+    const cm = ev.target.closest('[data-cm]'); if (cm){ const d = dObj(UI.calM + '-01'); d.setMonth(d.getMonth() + (+cm.dataset.cm)); UI.calM = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); return render(); }
     const f = ev.target.closest('[data-vf]'); if (f){ UI.vf = f.dataset.vf; return render(); }
     if (ev.target.closest('[data-act="settings"]')) return go('settings');
     const it = ev.target.closest('[data-sid]'); if (it) go('edit', {editId:it.dataset.sid});
@@ -666,13 +741,13 @@ function importData(text){
   (d.weights || []).forEach(w => { if (!w.date || !(w.kg > 0)) return; DB.weights = DB.weights.filter(x => x.date !== w.date); DB.weights.push({date:w.date, kg:w.kg}); nw++; });
   (d.checks || []).forEach(c => { if (!c.sid) return; DB.checks = DB.checks.filter(x => x.sid !== c.sid); DB.checks.push(c); nc++; });
   if (d.settings && d.settings.rest) DB.settings.rest = d.settings.rest;
-  UI.draft = null; UI.day = null; save(); toast(`Importiert: ${ns} Einheiten, ${nw} Messungen, ${nc} Checks`); render();
+  fixData(); UI.draft = null; UI.day = null; save(); toast(`Importiert: ${ns} Einheiten, ${nw} Messungen, ${nc} Checks`); render();
 }
 function renderSettings(v){
   const lb = DB.lastBackup;
   v.innerHTML = `<div class="row between"><button class="link" data-act="back">‹ Zurück</button></div><h1>Einstellungen</h1>
     <h2>Standard-Pause</h2><div class="seg">${[60,90,120,180].map(r => `<button class="${DB.settings.rest === r ? 'on' : ''}" data-rest="${r}">${r} s</button>`).join('')}</div>
-    <div class="sub small">Gilt für alle Übungen ohne eigene Pause. Eigene Pausen: BFR 30 s, Klimmzug/Ruderzug/Bank/Schulterdrücken 120 s.</div>
+    <div class="sub small">Gilt für alle Übungen ohne eigene Pause. Eigene Pausen: BFR 30 s, Klimmzug/Latzug/Ruderzug/Bank/Schulterdrücken 120 s.</div>
     <h2>Backup</h2>
     <div class="sub" style="margin-bottom:10px">Deine Daten liegen nur auf diesem Gerät. ${lb ? 'Letztes Backup: ' + fmtD(lb) : 'Noch kein Backup erstellt.'}</div>
     <button class="btn block" data-act="exp">Backup speichern (.json)</button>
@@ -685,7 +760,7 @@ function renderSettings(v){
     <div class="sub small">${DB.sessions.filter(s => s.status === 'done').length} Einheiten · ${DB.weights.length} Messungen · ${DB.checks.length} Knie-Checks</div>
     <div style="height:10px"></div>
     <button class="btn danger block" data-act="wipe">Alle Daten löschen</button>
-    <div class="sub small" style="margin-top:24px">Trainingslog · Version 1.0</div>`;
+    <div class="sub small" style="margin-top:24px">Trainingslog · Version 1.1</div>`;
   v.onclick = ev => {
     const r = ev.target.closest('[data-rest]'); if (r){ DB.settings.rest = +r.dataset.rest; save(); return render(); }
     const a = (ev.target.closest('[data-act]') || {}).dataset?.act;
