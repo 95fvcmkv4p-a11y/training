@@ -1,5 +1,5 @@
 /* Offline-Cache. Nach Änderungen an der App die Versionsnummer erhöhen. */
-const CACHE = 'trainingslog-v8';
+const CACHE = 'trainingslog-v9';
 const ASSETS = ['./', './index.html', './plan.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

@@ -448,7 +448,6 @@ function bindWorkout(root, s, mode){
   root.onclick = ev => {
     const b = ev.target.closest('[data-act]'); if (!b) return;
     const a = b.dataset.act, exId = b.dataset.ex, i = +b.dataset.i;
-    unlockAudio();
     if (a === 'settings') return go('settings');
     if (a === 'goknie') return go('knie', {kneeSid:null});
     if (a === 'day'){
@@ -827,13 +826,9 @@ function renderSettings(v){
 
 /* ---------- Timer ---------- */
 const TM = {end:0, iv:null};
-let AC = null;
-/* 'ambient': Timer-Ton mischt sich mit laufender Musik, statt sie auf dem iPhone zu beenden (iOS 16.4+) */
-function unlockAudio(){ try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch(e){} try { if (!AC){ const C = window.AudioContext || window.webkitAudioContext; if (C) AC = new C(); } if (AC && AC.state === 'suspended') AC.resume(); } catch(e){} }
-function beep(){ try { if (!AC) return; [0, .25, .5].forEach(t => { const o = AC.createOscillator(), g = AC.createGain(); o.frequency.value = 880; o.connect(g); g.connect(AC.destination); g.gain.setValueAtTime(.0001, AC.currentTime + t); g.gain.exponentialRampToValueAtTime(.3, AC.currentTime + t + .02); g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + t + .18); o.start(AC.currentTime + t); o.stop(AC.currentTime + t + .2); }); } catch(e){} }
 function startTimer(sec){ TM.end = Date.now() + sec * 1000; clearInterval(TM.iv); TM.iv = setInterval(tickTimer, 250); tickTimer(); $('#timer').classList.add('on'); }
 function tickTimer(){ const r = Math.ceil((TM.end - Date.now()) / 1000); if (r <= 0) return stopTimer(true); $('#tt').textContent = Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); }
-function stopTimer(fin){ clearInterval(TM.iv); $('#timer').classList.remove('on'); if (fin){ try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(e){} beep(); } }
+function stopTimer(fin){ clearInterval(TM.iv); $('#timer').classList.remove('on'); if (fin){ try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(e){} } }
 $('#timer').onclick = ev => { const b = ev.target.closest('[data-tm]'); if (!b) return; const a = b.dataset.tm; if (a === 'stop') return stopTimer(); TM.end += (+a) * 1000; tickTimer(); };
 
 /* ---------- Bildschirm anlassen ---------- */
