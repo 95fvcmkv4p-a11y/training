@@ -828,7 +828,8 @@ function renderSettings(v){
 /* ---------- Timer ---------- */
 const TM = {end:0, iv:null};
 let AC = null;
-function unlockAudio(){ try { if (!AC){ const C = window.AudioContext || window.webkitAudioContext; if (C) AC = new C(); } if (AC && AC.state === 'suspended') AC.resume(); } catch(e){} }
+/* 'ambient': Timer-Ton mischt sich mit laufender Musik, statt sie auf dem iPhone zu beenden (iOS 16.4+) */
+function unlockAudio(){ try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch(e){} try { if (!AC){ const C = window.AudioContext || window.webkitAudioContext; if (C) AC = new C(); } if (AC && AC.state === 'suspended') AC.resume(); } catch(e){} }
 function beep(){ try { if (!AC) return; [0, .25, .5].forEach(t => { const o = AC.createOscillator(), g = AC.createGain(); o.frequency.value = 880; o.connect(g); g.connect(AC.destination); g.gain.setValueAtTime(.0001, AC.currentTime + t); g.gain.exponentialRampToValueAtTime(.3, AC.currentTime + t + .02); g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + t + .18); o.start(AC.currentTime + t); o.stop(AC.currentTime + t + .2); }); } catch(e){} }
 function startTimer(sec){ TM.end = Date.now() + sec * 1000; clearInterval(TM.iv); TM.iv = setInterval(tickTimer, 250); tickTimer(); $('#timer').classList.add('on'); }
 function tickTimer(){ const r = Math.ceil((TM.end - Date.now()) / 1000); if (r <= 0) return stopTimer(true); $('#tt').textContent = Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); }
