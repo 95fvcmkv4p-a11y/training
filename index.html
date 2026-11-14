@@ -362,8 +362,8 @@ function renderHeute(v){
   const s = currentSession(), day = s.day, D = P.days[day], t = todayISO(), sug = suggest();
   let h = `<div class="row between"><span class="sub">${WD[dObj(t).getDay()]}, ${dObj(t).getDate()}. ${MO[dObj(t).getMonth()]}</span><button class="iconbtn" data-act="settings" aria-label="Einstellungen">⚙︎</button></div>
   <h1>Tag ${LB(day)} · ${esc(D.name)}</h1><div class="sub">${esc(D.sub)}</div>
-  <div class="chips">${DAYS.map(d => { const ld = lastDate(d); const lab = DB.active ? (d === day ? 'läuft' : (ld ? agoTxt(daysBetween(ld, t)) : 'neu')) : (d === sug ? 'vorgeschlagen' : ld ? agoTxt(daysBetween(ld, t)) : 'neu');
-    return `<div class="chip ${d === day ? 'on' : ''}" data-act="day" data-d="${d}">${LB(d)}<small>${lab}</small></div>`; }).join('')}</div>`;
+  <div class="chips">${DAYS.map(d => { const ld = lastDate(d); const lab = DB.active ? (d === day ? 'läuft' : (ld ? agoTxt(daysBetween(ld, t)) : '')) : (d === sug ? 'vorgeschlagen' : ld ? agoTxt(daysBetween(ld, t)) : '');
+    return `<div class="chip ${d === day ? 'on' : ''}" data-act="day" data-d="${d}">${LB(d)}<small>${esc(P.days[d].name)}</small>${lab ? `<small>${lab}</small>` : ''}</div>`; }).join('')}</div>`;
   const ll = lastLeg();
   if (D.leg && ll && ll.id !== s.id && daysBetween(ll.date, s.date) < 2) h += `<div class="banner red">⚠︎ Letzter Beintag (${LB(ll.day)}) war ${agoTxt(daysBetween(ll.date, t))} – Regel: mind. 48 h Abstand zwischen Beineinheiten.</div>`;
   if (restDay()) h += `<div class="banner info">😴 <span><b>Heute ist Pausentag</b> – gestern und vorgestern trainiert. Nur die tägliche Aktivierung, Erholung gehört zum Plan.</span></div>`;
