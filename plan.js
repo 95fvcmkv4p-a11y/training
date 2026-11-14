@@ -10,13 +10,14 @@
    start  Startgewicht in kg für die erste Einheit im neuen Plan (gilt nur, solange seit 'since' noch nichts eingetragen ist)
    lsi    true = Seitenvergleich rechts/links × 100 anzeigen (Test-Tag)
    diff   true = Differenz rechts − links anzeigen (Umfang)
+   label  (je Tag) angezeigter Buchstabe. Interne Schlüssel A–D nie ändern, sonst passen alte Einheiten nicht mehr.
    Übungen, die aus dem Plan fliegen, gehören nach ARCHIV – dann bleiben Verlauf und Fortschritt sichtbar.
 */
 window.PLAN = {
   since: '2026-11-14',        // ab diesem Datum gilt dieser Plan
   firstTest: '2026-11-25',    // erster Test-Tag fällig ab
   testEvery: 35,              // danach alle 35 Tage (ca. 6 Zyklen)
-  order: ['A', 'C', 'B', 'D'], // on-on-off: A, C, Pause, B, D, Pause
+  order: ['A', 'C', 'B', 'D'], // on-on-off: Beine 1, Pull, Pause, Beine 2, Push, Pause (angezeigt als A, B, C, D)
 
   /* Täglich 10–15 min, auch an Pausentagen */
   activation: [
@@ -73,7 +74,7 @@ window.PLAN = {
       { id:'a_lungepull', n:'Ausfallschritt mit seitlichem Zug (Stop-X)', z:'2 × 8 je Seite', sets:2, kg:true, start:10, side:true, cue:'Kabel 10 kg, Zug kommt von innen – Knie hält gegen das Einknicken.' },
       { id:'a_wade1', n:'Wadenheben einbeinig', z:'3 × 12–15 je Seite', sets:3, kg:true, start:10, side:true, cue:'KH 10 kg. Volle Amplitude, oben 2 s. Einmal pro Zyklus Max-Test ohne Last (Ziel ≥ 25).' }
     ]},
-    B: { name: 'Beine 2', sub: 'Hüfte, hintere Kette, Beinbeuger', warmup: 'b', leg: true, ex: [
+    B: { label:'C', name: 'Beine 2', sub: 'Hüfte, hintere Kette, Beinbeuger', warmup: 'b', leg: true, ex: [
       { id:'b_plyo', n:'Side Hop beidbeinig (Stop-X)', z:'3 × 10 · erst nach Test-Tag', sets:3, kg:false, rest:60, cue:'Über eine Linie, klein und schnell. Vor dem Test-Tag stattdessen seitliche Landestabilisation beidbeinig 3 × 5.' },
       { id:'b_trapbar', n:'Kreuzheben Trap Bar (Stop-X)', z:'4 × 5–6 · RIR 2–3', sets:4, kg:true, start:80, rest:150, cue:'Start 80 kg. Hüfte und Knie gleichzeitig strecken, Rücken neutral. +5 kg pro Zyklus, max. +10 %.' },
       { id:'b_hipthrust', n:'Hip Thrust', z:'3 × 6–10', sets:3, kg:true, start:100, rest:120, cue:'Start 100 kg. Schulterblätter auf der Bank, Kinn zur Brust, oben 1 s Gesäß maximal anspannen.' },
@@ -84,7 +85,7 @@ window.PLAN = {
       { id:'b_copen', n:'Copenhagen langer Hebel', z:'3 × 6–8 je Seite', sets:3, kg:false, side:true, cue:'Fuß auf der Bank. Gracilis belassen → Adduktoren voll belastbar.' },
       { id:'b_sideplank', n:'Side Plank + Abduktion', z:'2 × 30–45 s je Seite', sets:2, kg:false, unit:'s', side:true, cue:'Gestreckt, oberes Bein heben.' }
     ]},
-    C: { name: 'Pull', sub: 'Rücken, Bizeps, Core + Quad-Mikrodosis', warmup: 'c', ex: [
+    C: { label:'B', name: 'Pull', sub: 'Rücken, Bizeps, Core + Quad-Mikrodosis', warmup: 'c', ex: [
       { id:'c_klimmzug', n:'Klimmzug', z:'3–4 × max. sauber · 1 Wdh. Reserve', sets:4, kg:true, rest:120, cue:'Schulterblätter zuerst nach unten-hinten. Unter 4 Wdh. pro Satz: Band. Ziel 4 × 8, dann Zusatzgewicht (kg = Zusatzgewicht, leer = Körpergewicht).' },
       { id:'c_ruderzug', n:'Rudern sitzend (Ruderzug)', z:'3 × 6–10', sets:3, kg:true, rest:120, cue:'Start 93 kg. Brust am Polster, hinten 1 s halten.' },
       { id:'c_1armrow', n:'1-Arm Rudern im Ausfallschritt (Stop-X)', z:'3 × 8–10 je Seite', sets:3, kg:true, start:24, side:true, cue:'Kabel/KH 24 kg. Rechtes Bein vorn, wenn links zieht – Standbeinkontrolle unter Rotation.' },

@@ -10,8 +10,8 @@ Alle Daten bleiben lokal im Browser des Geräts – im Repo liegt nur der Code.
 - `manifest.webmanifest`, `icon-*.png` – App-Icon und Name für den Home-Bildschirm
 
 ## Version 3.0 (14.11.2026)
-- Neuer Plan Phase IV: Tag A Beine 1 (Quadrizeps), Tag B Beine 2 (hintere Kette), Tag C Pull, Tag D Push, jeweils mit Stop-X-Warm-up
-- Vorschlag im on-on-off-Rhythmus: A → C → Pause → B → D → Pause
+- Neuer Plan Phase IV: Tag A Beine 1 (Quadrizeps), Tag B Pull, Tag C Beine 2 (hintere Kette), Tag D Push, jeweils mit Stop-X-Warm-up
+- Vorschlag im on-on-off-Rhythmus: A Beine 1 → B Pull → Pause → C Beine 2 → D Push → Pause
 - Tägliche Aktivierung als eigene Checkliste mit Serienzähler
 - Test-Tag (T) mit Seitenvergleich (LSI bzw. Differenz rechts − links), Hinweis, wenn er fällig ist
 - Alte Übungen bleiben in Verlauf, Bearbeiten und Fortschritt („alt“) sichtbar

@@ -171,7 +171,10 @@ nav button.on{color:var(--accent)}
 <script>
 'use strict';
 /* ---------- Basis ---------- */
-const P = window.PLAN, DAYS = Object.keys(P.days);
+const P = window.PLAN;
+/* Angezeigter Buchstabe eines Tages (intern bleibt der Schlüssel gleich, damit alte Einheiten und Backups passen) */
+const LB = d => (P.days[d] && P.days[d].label) || d;
+const DAYS = Object.keys(P.days).sort((a, b) => LB(a) < LB(b) ? -1 : LB(a) > LB(b) ? 1 : 0);
 /* Übungen: aktueller Plan + Archiv (alte Übungen bleiben für Verlauf/Fortschritt erhalten). Gleiche id an zwei Tagen = eine Übung. */
 const EX = {};
 (P.archive || []).forEach(e => EX[e.id] = Object.assign({old:true, z:'', cue:'Nicht mehr im aktuellen Plan.'}, e));
@@ -358,17 +361,17 @@ function lastKneeCheck(){
 function renderHeute(v){
   const s = currentSession(), day = s.day, D = P.days[day], t = todayISO(), sug = suggest();
   let h = `<div class="row between"><span class="sub">${WD[dObj(t).getDay()]}, ${dObj(t).getDate()}. ${MO[dObj(t).getMonth()]}</span><button class="iconbtn" data-act="settings" aria-label="Einstellungen">⚙︎</button></div>
-  <h1>Tag ${day} · ${esc(D.name)}</h1><div class="sub">${esc(D.sub)}</div>
+  <h1>Tag ${LB(day)} · ${esc(D.name)}</h1><div class="sub">${esc(D.sub)}</div>
   <div class="chips">${DAYS.map(d => { const ld = lastDate(d); const lab = DB.active ? (d === day ? 'läuft' : (ld ? agoTxt(daysBetween(ld, t)) : 'neu')) : (d === sug ? 'vorgeschlagen' : ld ? agoTxt(daysBetween(ld, t)) : 'neu');
-    return `<div class="chip ${d === day ? 'on' : ''}" data-act="day" data-d="${d}">${d}<small>${lab}</small></div>`; }).join('')}</div>`;
+    return `<div class="chip ${d === day ? 'on' : ''}" data-act="day" data-d="${d}">${LB(d)}<small>${lab}</small></div>`; }).join('')}</div>`;
   const ll = lastLeg();
-  if (D.leg && ll && ll.id !== s.id && daysBetween(ll.date, s.date) < 2) h += `<div class="banner red">⚠︎ Letzter Beintag (${ll.day}) war ${agoTxt(daysBetween(ll.date, t))} – Regel: mind. 48 h Abstand zwischen Beineinheiten.</div>`;
+  if (D.leg && ll && ll.id !== s.id && daysBetween(ll.date, s.date) < 2) h += `<div class="banner red">⚠︎ Letzter Beintag (${LB(ll.day)}) war ${agoTxt(daysBetween(ll.date, t))} – Regel: mind. 48 h Abstand zwischen Beineinheiten.</div>`;
   if (restDay()) h += `<div class="banner info">😴 <span><b>Heute ist Pausentag</b> – gestern und vorgestern trainiert. Nur die tägliche Aktivierung, Erholung gehört zum Plan.</span></div>`;
   if (testDue() && day !== 'T') h += `<div class="banner info" data-act="day" data-d="T">🧪 <span><b>Test-Tag fällig</b> – ausgeruht, statt eines Beintags. Antippen zum Starten.</span></div>`;
   const lk = D.leg ? lastKneeCheck() : null, la = lk ? ampel(lk.k) : null;
-  if (la && (la[0] === 'y' || la[0] === 'r')) h += `<div class="banner ${la[0] === 'r' ? 'red' : ''}" data-act="goknie">🦵 <span><b>Letzter Knie-Check</b> (Tag ${lk.s.day}, ${fmtD(lk.s.date)}): ${esc(la[1])}</span></div>`;
+  if (la && (la[0] === 'y' || la[0] === 'r')) h += `<div class="banner ${la[0] === 'r' ? 'red' : ''}" data-act="goknie">🦵 <span><b>Letzter Knie-Check</b> (Tag ${LB(lk.s.day)}, ${fmtD(lk.s.date)}): ${esc(la[1])}</span></div>`;
   const kd = kneeDue();
-  if (kd) h += `<div class="banner" data-act="goknie">🦵 <span><b>Knie-Check offen</b> für Tag ${kd.day} vom ${fmtD(kd.date)} – Erguss und 24-h-Schmerz eintragen</span></div>`;
+  if (kd) h += `<div class="banner" data-act="goknie">🦵 <span><b>Knie-Check offen</b> für Tag ${LB(kd.day)} vom ${fmtD(kd.date)} – Erguss und 24-h-Schmerz eintragen</span></div>`;
   if (DB.active && DB.active.date !== t) h += `<div class="banner info">Offene Einheit vom ${fmtD(DB.active.date)} – abschließen oder unten verwerfen.</div>`;
   h += actHTML();
   h += workoutHTML(s, 'live');
@@ -452,7 +455,7 @@ function bindWorkout(root, s, mode){
       const d = b.dataset.d; if (d === s.day) return;
       if (DB.active){
         const [dn] = countSets(DB.active);
-        if (!confirm(`Laufende Einheit (Tag ${DB.active.day}${dn ? ', ' + dn + ' Sätze erledigt' : ''}) verwerfen und zu Tag ${d} wechseln?`)) return;
+        if (!confirm(`Laufende Einheit (Tag ${LB(DB.active.day)}${dn ? ', ' + dn + ' Sätze erledigt' : ''}) verwerfen und zu Tag ${LB(d)} wechseln?`)) return;
         DB.active = null; save();
       }
       UI.day = d; UI.draft = null; UI.warmOpen = false; UI.warmClosed = false; return render();
@@ -537,7 +540,7 @@ function finishSession(s){
   cleanSession(s); s.status = 'done'; s.finished = Date.now();
   DB.sessions.push(s); DB.active = null; UI.draft = null; UI.day = null; UI.warmOpen = false; UI.warmClosed = false; UI.open = {};
   save(); stopTimer(); releaseAwake();
-  toast(`Tag ${s.day} gespeichert 💪`);
+  toast(`Tag ${LB(s.day)} gespeichert 💪`);
   if (P.days[s.day].leg){ go('knie', {kneeSid:s.id}); } else render();
 }
 
@@ -546,7 +549,7 @@ function renderEdit(v){
   const s = DB.sessions.find(x => x.id === UI.editId); if (!s) return go('verlauf');
   padSession(s);
   let h = `<div class="row between"><button class="link" data-act="editdone">‹ Verlauf</button></div>
-    <h1>Tag ${s.day} · ${esc(P.days[s.day].name)}</h1><div class="sub">Einheit bearbeiten – Werte ändern, Sätze ab-/anhaken</div>`;
+    <h1>Tag ${LB(s.day)} · ${esc(P.days[s.day].name)}</h1><div class="sub">Einheit bearbeiten – Werte ändern, Sätze ab-/anhaken</div>`;
   h += workoutHTML(s, 'edit');
   h += `<h2>Notiz zur Einheit</h2><textarea data-f="snote">${esc(s.note)}</textarea>
     <div class="foot"><button class="btn danger" data-act="editdel">Löschen</button><button class="btn" data-act="editdone">Fertig</button></div>`;
@@ -562,7 +565,7 @@ function calendarHTML(all){
   for (let d = 1; d <= n; d++){
     const iso = UI.calM + '-' + String(d).padStart(2, '0'), ss = byDate[iso] || [];
     cnt += ss.length;
-    cells += `<div class="d${ss.length ? ' on' : ''}${iso === t ? ' today' : ''}"${ss.length ? ` data-sid="${ss[0].id}"` : ''}>${d}${ss.length ? `<small>${ss.map(s => s.day).join('')}</small>` : ''}</div>`;
+    cells += `<div class="d${ss.length ? ' on' : ''}${iso === t ? ' today' : ''}"${ss.length ? ` data-sid="${ss[0].id}"` : ''}>${d}${ss.length ? `<small>${ss.map(s => LB(s.day)).join('')}</small>` : ''}</div>`;
   }
   return `<div class="card"><div class="row between"><button class="iconbtn" data-cm="-1" aria-label="Vormonat">‹</button>
     <div style="text-align:center"><b>${MO[m - 1]} ${y}</b><div class="sub small">${cnt} ${cnt === 1 ? 'Einheit' : 'Einheiten'}</div></div>
@@ -575,14 +578,14 @@ function renderVerlauf(v){
   const lb = DB.lastBackup ? daysBetween(DB.lastBackup, todayISO()) : null;
   if (all.length && (lb == null || lb > 14)) h += `<div class="banner info" data-act="settings">💾 <span>${lb == null ? 'Noch kein Backup' : 'Letztes Backup ' + agoTxt(lb)} – in den Einstellungen sichern.</span></div>`;
   h += calendarHTML(all);
-  h += `<div class="seg" style="margin-top:14px">${['Alle', ...DAYS].map(d => `<button class="${UI.vf === d ? 'on' : ''}" data-vf="${d}">${d}</button>`).join('')}</div><div class="list">`;
+  h += `<div class="seg" style="margin-top:14px">${['Alle', ...DAYS].map(d => `<button class="${UI.vf === d ? 'on' : ''}" data-vf="${d}">${LB(d)}</button>`).join('')}</div><div class="list">`;
   if (!list.length) h += `<div class="empty">Noch keine Einheiten.<br>Alte Werte kannst du in den Einstellungen importieren.</div>`;
   list.forEach(s => {
     const D = P.days[s.day]; let n = 0; Object.values(s.ex).forEach(e => n += e.sets.length);
     const top = exList(s).find(ex => ex.kg && s.ex[ex.id] && s.ex[ex.id].sets.some(x => x.kg > 0));
     const topTxt = top ? ' · ' + esc(top.n.split(' ')[0]) + ' ' + fmtN(Math.max(...s.ex[top.id].sets.map(x => x.kg || 0))) + ' kg' : '';
     const durTxt = s.start && s.finished ? ' · ' + Math.round((s.finished - s.start) / 6e4) + ' min' : '';
-    h += `<div class="item" data-sid="${s.id}"><div class="row" style="min-width:0"><div class="badge ${s.day}">${s.day}</div><div style="min-width:0"><b>Tag ${s.day} · ${esc(D.name)}</b><div class="sub small">${fmtDL(s.date)} · ${n} Sätze${durTxt}${topTxt}</div>${s.note ? `<div class="sub small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.note)}</div>` : ''}</div></div><span class="sub">›</span></div>`;
+    h += `<div class="item" data-sid="${s.id}"><div class="row" style="min-width:0"><div class="badge ${s.day}">${LB(s.day)}</div><div style="min-width:0"><b>Tag ${LB(s.day)} · ${esc(D.name)}</b><div class="sub small">${fmtDL(s.date)} · ${n} Sätze${durTxt}${topTxt}</div>${s.note ? `<div class="sub small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.note)}</div>` : ''}</div></div><span class="sub">›</span></div>`;
   });
   v.innerHTML = h + '</div>';
   v.onclick = ev => {
@@ -645,7 +648,7 @@ function renderFortschritt(v){
   const unit = ex.lsi ? '%' : kgMode ? 'kg' : (RL[ex.unit] || 'Wdh').replace('Sek.', 's').replace('Grad', '°');
   const pts = hist.map((s, i) => ({s, i, m:metricOf(ex, s.ex[ex.id].sets, kgMode)})).filter(p => p.m && p.m.top != null);
   let h = `<h1>Fortschritt</h1><div class="sub">Übung antippen</div>
-    <div class="seg" style="margin-top:14px">${DAYS.map(d => `<button class="${d === UI.pday ? 'on' : ''}" data-pd="${d}">${d}</button>`).join('')}</div>
+    <div class="seg" style="margin-top:14px">${DAYS.map(d => `<button class="${d === UI.pday ? 'on' : ''}" data-pd="${d}">${LB(d)}</button>`).join('')}</div>
     <div class="exlist">${list.map(e => `<button class="${e.id === ex.id ? 'on' : ''}" data-pe="${e.id}">${esc(e.n)}${e.old ? ' <span class="sub small">(alt)</span>' : ''}</button>`).join('')}</div>`;
   if (!pts.length){ h += `<div class="empty">Für ${esc(ex.n)} gibt es noch keine Werte.</div>`; }
   else {
@@ -725,7 +728,7 @@ function renderKnie(v){
   const s = legs.find(x => x.id === sid);
   let c = DB.checks.find(k => k.sid === sid);
   const cc = c || {};
-  h += `<h2>Einheit</h2><select class="field" id="ksel">${legs.map(x => `<option value="${x.id}" ${x.id === sid ? 'selected' : ''}>Tag ${x.day} · ${fmtDL(x.date)}</option>`).join('')}</select>
+  h += `<h2>Einheit</h2><select class="field" id="ksel">${legs.map(x => `<option value="${x.id}" ${x.id === sid ? 'selected' : ''}>Tag ${LB(x.day)} · ${fmtDL(x.date)}</option>`).join('')}</select>
     <h2>Erguss (Stroke-Test)</h2><div class="seg" data-k="erg">${['0','Spur','1+','2+','3+'].map(e => `<button class="${cc.erg === e ? 'on' : ''}" data-val="${e}">${e}</button>`).join('')}</div>
     <h2>Schmerz während · <span>${cc.pD ?? '–'}</span>/10</h2><div class="seg num" data-k="pD">${[...Array(11).keys()].map(n => `<button class="${cc.pD === n ? 'on' : ''}" data-val="${n}">${n}</button>`).join('')}</div>
     <h2>Schmerz nach 24 h · <span>${cc.p24 ?? '–'}</span>/10</h2><div class="seg num" data-k="p24">${[...Array(11).keys()].map(n => `<button class="${cc.p24 === n ? 'on' : ''}" data-val="${n}">${n}</button>`).join('')}</div>
@@ -737,7 +740,7 @@ function renderKnie(v){
   const prev = DB.checks.filter(k => k.sid !== sid).map(k => ({k, s:DB.sessions.find(x => x.id === k.sid)})).filter(x => x.s).sort((a, b) => a.s.date < b.s.date ? 1 : -1).slice(0, 10);
   if (prev.length){
     const colr = {g:'var(--good)', y:'var(--warn)', r:'var(--bad)', n:'var(--muted)'};
-    h += `<h2>Frühere Checks</h2>` + prev.map(({k, s}) => `<div class="hist row between" data-ks="${s.id}" style="cursor:pointer"><span><span class="dot" style="background:${colr[ampel(k)[0]]}"></span> &nbsp;<b>Tag ${s.day}</b> · ${fmtDL(s.date)}</span><span class="sub small">Erguss ${k.erg ?? '–'} · 24 h ${k.p24 ?? '–'}/10</span></div>`).join('');
+    h += `<h2>Frühere Checks</h2>` + prev.map(({k, s}) => `<div class="hist row between" data-ks="${s.id}" style="cursor:pointer"><span><span class="dot" style="background:${colr[ampel(k)[0]]}"></span> &nbsp;<b>Tag ${LB(s.day)}</b> · ${fmtDL(s.date)}</span><span class="sub small">Erguss ${k.erg ?? '–'} · 24 h ${k.p24 ?? '–'}/10</span></div>`).join('');
   }
   v.innerHTML = h;
   const getC = () => { if (!c){ c = {sid, erg:null, pD:null, p24:null, sleep:null, note:''}; DB.checks.push(c); } return c; };
@@ -773,7 +776,7 @@ function exportCSV(){
   const rows = [['Datum','Tag','Übung','Satz','kg','Wdh/Sek (L)','Wdh/Sek (R)','RPE','Notiz Übung','Notiz Einheit'].map(q).join(';')];
   doneSessions().slice().reverse().forEach(s => P.days[s.day].ex.concat(Object.keys(s.ex).filter(id => !P.days[s.day].ex.find(e => e.id === id)).map(id => EX[id] || {id, n:id})).forEach(ex => {
     const e = s.ex[ex.id]; if (!e) return;
-    e.sets.forEach((x, i) => rows.push([s.date, s.day, ex.n, i+1, n(x.kg), n(x.r), n(x.rR), e.rpe ?? '', i === 0 ? e.note || '' : '', s.note || ''].map(q).join(';')));
+    e.sets.forEach((x, i) => rows.push([s.date, LB(s.day), ex.n, i+1, n(x.kg), n(x.r), n(x.rR), e.rpe ?? '', i === 0 ? e.note || '' : '', s.note || ''].map(q).join(';')));
   }));
   const wr = ['', '"Körpergewicht"', '"Datum";"kg"'].concat(weightsAsc().map(w => q(w.date) + ';' + q(n(w.kg))));
   deliver('﻿' + rows.concat(wr).join('\r\n'), 'trainingslog-' + todayISO() + '.csv', 'text/csv');
