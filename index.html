@@ -239,6 +239,11 @@ function lastFor(exId, excludeId, before){
 }
 function buildSets(ex){
   const L = lastFor(ex.id), src = L ? L.e.sets.filter(hasVal) : [], out = [];
+  /* Startgewicht aus dem Plan, solange im neuen Plan noch nichts eingetragen ist (Wdh. bleiben leer) */
+  if (ex.start != null && (!L || L.s.date < (P.since || ''))){
+    for (let i = 0; i < ex.sets; i++) out.push({kg:ex.start, r:null, rR:null, done:false, c:{kg:1}});
+    return out;
+  }
   for (let i = 0; i < ex.sets; i++){
     const b = src[i] || src[src.length-1];
     out.push(b ? {kg:b.kg ?? null, r:b.r ?? null, rR:b.rR ?? null, done:false, c:{kg:1,r:1,rR:1}}
@@ -406,7 +411,7 @@ function workoutHTML(s, mode){
     h += `<div class="card ${complete ? 'complete' : ''}" data-card="${ex.id}">
       <div class="row between" style="align-items:flex-start"><div class="ex-title">${esc(ex.n)}</div>${ex.bfr ? '<span class="tag bfr">BFR</span>' : ex.side ? '<span class="tag">je Seite</span>' : ''}</div>
       <div class="meta">${ex.old ? 'Nicht mehr im Plan' : 'Ziel: ' + esc(ex.z)}</div>
-      <div class="last">${L ? 'Letztes Mal (' + fmtD(L.s.date) + '): ' + summary(ex, L.e.sets) + (cmp && sideCmp(ex, L.e.sets) ? ' · ' + sideCmp(ex, L.e.sets) : '') : 'Noch keine Werte'}</div>
+      <div class="last">${L ? 'Letztes Mal (' + fmtD(L.s.date) + '): ' + summary(ex, L.e.sets) + (cmp && sideCmp(ex, L.e.sets) ? ' · ' + sideCmp(ex, L.e.sets) : '') : 'Noch keine Werte'}${ex.start != null && (!L || L.s.date < (P.since || '')) ? ' · <b>Startgewicht: ' + fmtN(ex.start) + ' kg</b>' : ''}</div>
       <div class="links"><button class="link" data-act="cue" data-ex="${ex.id}">ⓘ Ausführung</button><button class="link" data-act="note" data-ex="${ex.id}">✎ Notiz${e.note ? ' •' : ''}</button></div>
       <div class="cue" ${UI.open['cue' + ex.id] ? '' : 'hidden'}>${esc(ex.cue)}</div>
       <textarea data-f="exnote" data-ex="${ex.id}" placeholder="Notiz zu ${esc(ex.n)}" ${UI.open['note' + ex.id] ? '' : 'hidden'}>${esc(e.note || '')}</textarea>
